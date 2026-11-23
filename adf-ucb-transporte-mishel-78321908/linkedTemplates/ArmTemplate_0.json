@@ -239,6 +239,174 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/ds_gold_dim_departamento')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_dw_hospital",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "gold"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "gold",
+					"table": "dim_departamento"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_dw_hospital')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_gold_dim_diagnostico')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_dw_hospital",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "gold"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "gold",
+					"table": "dim_diagnostico"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_dw_hospital')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_gold_dim_fecha')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_dw_hospital",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "gold"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "gold",
+					"table": "dim_fecha"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_dw_hospital')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_gold_dim_paciente')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_dw_hospital",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "gold"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "gold",
+					"table": "dim_paciente"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_dw_hospital')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_gold_dim_servicio_cargo')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_dw_hospital",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "gold"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "gold",
+					"table": "dim_servicio_cargo"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_dw_hospital')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_gold_fact_admisiones')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_dw_hospital",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "gold"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "gold",
+					"table": "fact_admisiones"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_dw_hospital')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_gold_fact_facturacion')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_dw_hospital",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "gold"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "gold",
+					"table": "fact_facturacion"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_dw_hospital')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ds_silver_admissions')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -446,6 +614,320 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_dw_hospital')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_gold_dim_departamento')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "gold"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_silver_admissions",
+								"type": "DatasetReference"
+							},
+							"name": "srcSilverAdmissions"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_gold_dim_departamento",
+								"type": "DatasetReference"
+							},
+							"name": "sinkDimDepartamento"
+						}
+					],
+					"transformations": [
+						{
+							"name": "distintos"
+						},
+						{
+							"name": "columnas"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          admission_id as integer,",
+						"          patient_id as integer,",
+						"          admission_date as date,",
+						"          discharge_date as date,",
+						"          department as string,",
+						"          attending_doctor_id as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> srcSilverAdmissions",
+						"srcSilverAdmissions aggregate(groupBy(department),",
+						"     cantidad = count()) ~> distintos",
+						"distintos select(mapColumn(",
+						"          nombre_departamento = department",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> columnas",
+						"columnas sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimDepartamento"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_silver_admissions')]",
+				"[concat(variables('factoryId'), '/datasets/ds_gold_dim_departamento')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_gold_dim_diagnostico')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "gold"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_silver_diagnoses",
+								"type": "DatasetReference"
+							},
+							"name": "srcSilverDiagnoses"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_gold_dim_diagnostico",
+								"type": "DatasetReference"
+							},
+							"name": "sinkDimDiagnostico"
+						}
+					],
+					"transformations": [
+						{
+							"name": "severidad"
+						},
+						{
+							"name": "distintos"
+						},
+						{
+							"name": "columnas"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          diagnosis_id as integer,",
+						"          admission_id as integer,",
+						"          icd_code as string,",
+						"          diagnosis_description as string,",
+						"          severity as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> srcSilverDiagnoses",
+						"srcSilverDiagnoses derive(sev = iif(isNull(severity),'Unknown',severity)) ~> severidad",
+						"severidad aggregate(groupBy(icd_code,",
+						"          sev),",
+						"     descripcion = first(diagnosis_description)) ~> distintos",
+						"distintos select(mapColumn(",
+						"          codigo_icd = icd_code,",
+						"          descripcion_patologia = descripcion,",
+						"          nivel_severidad = sev",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> columnas",
+						"columnas sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimDiagnostico"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_silver_diagnoses')]",
+				"[concat(variables('factoryId'), '/datasets/ds_gold_dim_diagnostico')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_gold_dim_paciente')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "gold"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_silver_patients",
+								"type": "DatasetReference"
+							},
+							"name": "srcSilverPatients"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_gold_dim_paciente",
+								"type": "DatasetReference"
+							},
+							"name": "sinkDimPaciente"
+						}
+					],
+					"transformations": [
+						{
+							"name": "calcular"
+						},
+						{
+							"name": "columnas"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          patient_id as integer,",
+						"          full_name as string,",
+						"          gender as string,",
+						"          date_of_birth as date,",
+						"          phone as string,",
+						"          email as string,",
+						"          address as string,",
+						"          insurance_provider as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> srcSilverPatients",
+						"srcSilverPatients derive(genero = case(gender=='M','Masculino', gender=='F','Femenino','Otro'),",
+						"          rango_etario = case(isNull(date_of_birth),'Desconocido', toInteger(monthsBetween(currentTimestamp(), toTimestamp(toString(date_of_birth,'yyyy-MM-dd'),'yyyy-MM-dd'))/12)<=18,'0-18', toInteger(monthsBetween(currentTimestamp(), toTimestamp(toString(date_of_birth,'yyyy-MM-dd'),'yyyy-MM-dd'))/12)<=35,'19-35', toInteger(monthsBetween(currentTimestamp(), toTimestamp(toString(date_of_birth,'yyyy-MM-dd'),'yyyy-MM-dd'))/12)<=60,'36-60','60+'),",
+						"          proveedor_seguro = iif(isNull(insurance_provider),'Sin seguro',insurance_provider)) ~> calcular",
+						"calcular select(mapColumn(",
+						"          patient_id_bk = patient_id,",
+						"          nombre_completo = full_name,",
+						"          genero,",
+						"          fecha_nacimiento = date_of_birth,",
+						"          rango_etario,",
+						"          correo_electronico = email,",
+						"          direccion = address,",
+						"          proveedor_seguro",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> columnas",
+						"columnas sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimPaciente"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_silver_patients')]",
+				"[concat(variables('factoryId'), '/datasets/ds_gold_dim_paciente')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_gold_dim_servicio_cargo')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "gold"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_silver_billing",
+								"type": "DatasetReference"
+							},
+							"name": "srcSilverBilling"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_gold_dim_servicio_cargo",
+								"type": "DatasetReference"
+							},
+							"name": "sinkDimServicio"
+						}
+					],
+					"transformations": [
+						{
+							"name": "distintos"
+						},
+						{
+							"name": "columnas"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          billing_id as integer,",
+						"          admission_id as integer,",
+						"          charge_type as string,",
+						"          amount as decimal(12,2),",
+						"          payment_status as string,",
+						"          payment_date as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> srcSilverBilling",
+						"srcSilverBilling aggregate(groupBy(charge_type,",
+						"          payment_status),",
+						"     cantidad = count()) ~> distintos",
+						"distintos select(mapColumn(",
+						"          tipo_cargo = charge_type,",
+						"          estado_pago = payment_status",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> columnas",
+						"columnas sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimServicio"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_silver_billing')]",
+				"[concat(variables('factoryId'), '/datasets/ds_gold_dim_servicio_cargo')]"
 			]
 		}
 	]
