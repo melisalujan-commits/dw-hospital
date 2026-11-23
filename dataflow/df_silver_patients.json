@@ -1,0 +1,95 @@
+{
+	"name": "df_silver_patients",
+	"properties": {
+		"folder": {
+			"name": "silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_bronze_patients",
+						"type": "DatasetReference"
+					},
+					"name": "srcPatients"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_silver_patients",
+						"type": "DatasetReference"
+					},
+					"name": "sinkSilverPatients"
+				}
+			],
+			"transformations": [
+				{
+					"name": "limpiar"
+				},
+				{
+					"name": "corregirsiglo"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          patient_id as string,",
+				"          full_name as string,",
+				"          gender as string,",
+				"          date_of_birth as string,",
+				"          phone as string,",
+				"          email as string,",
+				"          address as string,",
+				"          insurance_provider as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> srcPatients",
+				"srcPatients derive(full_name = trim(full_name),",
+				"          gender = case(upper(left(trim(gender),1))=='M','M', upper(left(trim(gender),1))=='F','F','O'),",
+				"          date_of_birth = case(\r",
+				" regexMatch(trim(date_of_birth),'^\\\\d{4}-\\\\d{2}-\\\\d{2}$'), toDate(trim(date_of_birth),'yyyy-MM-dd'),\r",
+				" regexMatch(trim(date_of_birth),'^\\\\d{2}/\\\\d{2}/\\\\d{4}$'), toDate(trim(date_of_birth),'MM/dd/yyyy'),\r",
+				" regexMatch(trim(date_of_birth),'^\\\\d{2}-\\\\d{2}-\\\\d{2}$'), toDate(trim(date_of_birth),'MM-dd-yy'),\r",
+				" regexMatch(trim(date_of_birth),'^\\\\d{2}-[A-Za-z]{3}-\\\\d{4}$'), toDate(trim(date_of_birth),'dd-MMM-yyyy'),\r",
+				" toDate(trim(date_of_birth),'MMMM dd, yyyy')),",
+				"          phone = iif(length(regexReplace(phone,'[^0-9]',''))>=7, regexReplace(phone,'[^0-9]',''), toString(null())),",
+				"          email = lower(replace(replace(trim(email),'gmial.com','gmail.com'),'gmail,com','gmail.com')),",
+				"          address = trim(address),",
+				"          insurance_provider = case(\r",
+				" isNull(insurance_provider), toString(null()),\r",
+				" startsWith(upper(regexReplace(insurance_provider,'[^A-Za-z]','')),'AETNA'),'Aetna',\r",
+				" startsWith(upper(regexReplace(insurance_provider,'[^A-Za-z]','')),'CIGNA'),'Cigna',\r",
+				" startsWith(upper(regexReplace(insurance_provider,'[^A-Za-z]','')),'BLUE'),'BlueCross',\r",
+				" startsWith(upper(regexReplace(insurance_provider,'[^A-Za-z]','')),'UNITED') || upper(trim(insurance_provider))=='UHC','UnitedHealth',\r",
+				" startsWith(upper(regexReplace(insurance_provider,'[^A-Za-z]','')),'MEDICARE'),'Medicare',\r",
+				" startsWith(upper(regexReplace(insurance_provider,'[^A-Za-z]','')),'MEDICAID'),'Medicaid',\r",
+				" startsWith(upper(regexReplace(insurance_provider,'[^A-Za-z]','')),'SELF'),'Self-Pay',\r",
+				" 'Otro')) ~> limpiar",
+				"limpiar derive(date_of_birth = iif(date_of_birth > currentDate(), addMonths(date_of_birth,-1200), date_of_birth)) ~> corregirsiglo",
+				"corregirsiglo sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          patient_id as integer,",
+				"          full_name as string,",
+				"          gender as string,",
+				"          date_of_birth as date,",
+				"          phone as string,",
+				"          email as string,",
+				"          address as string,",
+				"          insurance_provider as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkSilverPatients"
+			]
+		}
+	}
+}
