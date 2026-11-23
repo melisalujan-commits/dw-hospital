@@ -1,0 +1,74 @@
+{
+    "name": "df_gold_dim_diagnostico",
+    "properties": {
+        "folder": {
+            "name": "gold"
+        },
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_diagnoses",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcSilverDiagnoses"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_diagnostico",
+                        "type": "DatasetReference"
+                    },
+                    "name": "sinkDimDiagnostico"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "severidad"
+                },
+                {
+                    "name": "distintos"
+                },
+                {
+                    "name": "columnas"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "\t\tdiagnosis_id as integer,",
+                "\t\tadmission_id as integer,",
+                "\t\ticd_code as string,",
+                "\t\tdiagnosis_description as string,",
+                "\t\tseverity as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcSilverDiagnoses",
+                "srcSilverDiagnoses derive(sev = iif(isNull(severity),'Unknown',severity)) ~> severidad",
+                "severidad aggregate(groupBy(icd_code,",
+                "\t\tsev),",
+                "\tdescripcion = first(diagnosis_description)) ~> distintos",
+                "distintos select(mapColumn(",
+                "\t\tcodigo_icd = icd_code,",
+                "\t\tdescripcion_patologia = descripcion,",
+                "\t\tnivel_severidad = sev",
+                "\t),",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true) ~> columnas",
+                "columnas sink(allowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tdeletable:false,",
+                "\tinsertable:true,",
+                "\tupdateable:false,",
+                "\tupsertable:false,",
+                "\tformat: 'table',",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true,",
+                "\terrorHandlingOption: 'stopOnFirstError') ~> sinkDimDiagnostico"
+            ]
+        }
+    }
+}

@@ -1,0 +1,196 @@
+{
+    "name": "df_gold_fact_admisiones",
+    "properties": {
+        "folder": {
+            "name": "gold"
+        },
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_admissions",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcAdmissions"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_diagnoses",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcDiagnoses"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_paciente",
+                        "type": "DatasetReference"
+                    },
+                    "name": "dimPaciente"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_departamento",
+                        "type": "DatasetReference"
+                    },
+                    "name": "dimDepartamento"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_diagnostico",
+                        "type": "DatasetReference"
+                    },
+                    "name": "dimDiagnostico"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_fact_admisiones",
+                        "type": "DatasetReference"
+                    },
+                    "name": "sinkFactAdmisiones"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "diagPrincipal"
+                },
+                {
+                    "name": "diagSel"
+                },
+                {
+                    "name": "lkPaciente"
+                },
+                {
+                    "name": "lkDepartamento"
+                },
+                {
+                    "name": "lkDiagAdm"
+                },
+                {
+                    "name": "lkDimDiag"
+                },
+                {
+                    "name": "calcular"
+                },
+                {
+                    "name": "columnas"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "\t\tadmission_id as integer,",
+                "\t\tpatient_id as integer,",
+                "\t\tadmission_date as date,",
+                "\t\tdischarge_date as date,",
+                "\t\tdepartment as string,",
+                "\t\tattending_doctor_id as integer",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcAdmissions",
+                "source(output(",
+                "\t\tdiagnosis_id as integer,",
+                "\t\tadmission_id as integer,",
+                "\t\ticd_code as string,",
+                "\t\tdiagnosis_description as string,",
+                "\t\tseverity as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcDiagnoses",
+                "source(output(",
+                "\t\tpaciente_key as integer,",
+                "\t\tpatient_id_bk as integer,",
+                "\t\tnombre_completo as string,",
+                "\t\tgenero as string,",
+                "\t\tfecha_nacimiento as date,",
+                "\t\trango_etario as string,",
+                "\t\tcorreo_electronico as string,",
+                "\t\tdireccion as string,",
+                "\t\tproveedor_seguro as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> dimPaciente",
+                "source(output(",
+                "\t\tdepartamento_key as integer,",
+                "\t\tnombre_departamento as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> dimDepartamento",
+                "source(output(",
+                "\t\tdiagnostico_key as integer,",
+                "\t\tcodigo_icd as string,",
+                "\t\tdescripcion_patologia as string,",
+                "\t\tnivel_severidad as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> dimDiagnostico",
+                "srcDiagnoses aggregate(groupBy(admission_id),",
+                "\ticd = first(icd_code),",
+                "\tsev = first(iif(isNull(severity),'Unknown',severity))) ~> diagPrincipal",
+                "diagPrincipal select(mapColumn(",
+                "\t\tdiag_adm_id = admission_id,",
+                "\t\ticd,",
+                "\t\tsev",
+                "\t),",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true) ~> diagSel",
+                "srcAdmissions, dimPaciente lookup(patient_id == patient_id_bk,",
+                "\tmultiple: false,",
+                "\tpickup: 'any',",
+                "\tbroadcast: 'auto')~> lkPaciente",
+                "lkPaciente, dimDepartamento lookup(department == nombre_departamento,",
+                "\tmultiple: false,",
+                "\tpickup: 'any',",
+                "\tbroadcast: 'auto')~> lkDepartamento",
+                "lkDepartamento, diagSel lookup(admission_id == diag_adm_id,",
+                "\tmultiple: false,",
+                "\tpickup: 'any',",
+                "\tbroadcast: 'auto')~> lkDiagAdm",
+                "lkDiagAdm, dimDiagnostico lookup(icd == codigo_icd && sev == nivel_severidad,",
+                "\tmultiple: false,",
+                "\tpickup: 'any',",
+                "\tbroadcast: 'auto')~> lkDimDiag",
+                "lkDimDiag derive(diagnostico_key = coalesce(diagnostico_key, -1),",
+                "\t\tfecha_ingreso_key = toInteger(toString(admission_date,'yyyyMMdd')),",
+                "\t\tfecha_alta_key = toInteger(toString(discharge_date,'yyyyMMdd')),",
+                "\t\tdias_estancia = iif(discharge_date >= admission_date, toInteger((toLong(toTimestamp(toString(discharge_date,'yyyy-MM-dd'),'yyyy-MM-dd')) - toLong(toTimestamp(toString(admission_date,'yyyy-MM-dd'),'yyyy-MM-dd'))) / 86400000), toInteger(null())),",
+                "\t\tmedico_id = attending_doctor_id,",
+                "\t\tconteo_admisiones = 1) ~> calcular",
+                "calcular select(mapColumn(",
+                "\t\tadmission_id_bk = admission_id,",
+                "\t\tpaciente_key,",
+                "\t\tdepartamento_key,",
+                "\t\tdiagnostico_key,",
+                "\t\tfecha_ingreso_key,",
+                "\t\tfecha_alta_key,",
+                "\t\tmedico_id,",
+                "\t\tdias_estancia,",
+                "\t\tconteo_admisiones",
+                "\t),",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true) ~> columnas",
+                "columnas sink(allowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tdeletable:false,",
+                "\tinsertable:true,",
+                "\tupdateable:false,",
+                "\tupsertable:false,",
+                "\tformat: 'table',",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true,",
+                "\terrorHandlingOption: 'stopOnFirstError') ~> sinkFactAdmisiones"
+            ]
+        }
+    }
+}

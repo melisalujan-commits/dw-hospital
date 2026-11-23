@@ -1,0 +1,19 @@
+{
+    "name": "ds_gold_fact_admisiones",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "ls_dw_hospital",
+            "type": "LinkedServiceReference"
+        },
+        "folder": {
+            "name": "gold"
+        },
+        "annotations": [],
+        "type": "AzureSqlTable",
+        "schema": [],
+        "typeProperties": {
+            "schema": "gold",
+            "table": "fact_admisiones"
+        }
+    }
+}

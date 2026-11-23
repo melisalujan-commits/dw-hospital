@@ -1,0 +1,50 @@
+{
+    "name": "pl_etl_hospital",
+    "properties": {
+        "activities": [
+            {
+                "name": "ejecutarSilver",
+                "type": "ExecutePipeline",
+                "dependsOn": [],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "pl_silver",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            },
+            {
+                "name": "ejecutarGold",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "ejecutarSilver",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "pl_gold",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            }
+        ],
+        "folder": {
+            "name": "etl"
+        },
+        "annotations": []
+    }
+}

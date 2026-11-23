@@ -1,0 +1,78 @@
+{
+    "name": "df_gold_dim_paciente",
+    "properties": {
+        "folder": {
+            "name": "gold"
+        },
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_patients",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcSilverPatients"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_paciente",
+                        "type": "DatasetReference"
+                    },
+                    "name": "sinkDimPaciente"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "calcular"
+                },
+                {
+                    "name": "columnas"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "\t\tpatient_id as integer,",
+                "\t\tfull_name as string,",
+                "\t\tgender as string,",
+                "\t\tdate_of_birth as date,",
+                "\t\tphone as string,",
+                "\t\temail as string,",
+                "\t\taddress as string,",
+                "\t\tinsurance_provider as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcSilverPatients",
+                "srcSilverPatients derive(genero = case(gender=='M','Masculino', gender=='F','Femenino','Otro'),",
+                "\t\trango_etario = case(isNull(date_of_birth),'Desconocido', toInteger(monthsBetween(currentTimestamp(), toTimestamp(toString(date_of_birth,'yyyy-MM-dd'),'yyyy-MM-dd'))/12)<=18,'0-18', toInteger(monthsBetween(currentTimestamp(), toTimestamp(toString(date_of_birth,'yyyy-MM-dd'),'yyyy-MM-dd'))/12)<=35,'19-35', toInteger(monthsBetween(currentTimestamp(), toTimestamp(toString(date_of_birth,'yyyy-MM-dd'),'yyyy-MM-dd'))/12)<=60,'36-60','60+'),",
+                "\t\tproveedor_seguro = iif(isNull(insurance_provider),'Sin seguro',insurance_provider)) ~> calcular",
+                "calcular select(mapColumn(",
+                "\t\tpatient_id_bk = patient_id,",
+                "\t\tnombre_completo = full_name,",
+                "\t\tgenero,",
+                "\t\tfecha_nacimiento = date_of_birth,",
+                "\t\trango_etario,",
+                "\t\tcorreo_electronico = email,",
+                "\t\tdireccion = address,",
+                "\t\tproveedor_seguro",
+                "\t),",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true) ~> columnas",
+                "columnas sink(allowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tdeletable:false,",
+                "\tinsertable:true,",
+                "\tupdateable:false,",
+                "\tupsertable:false,",
+                "\tformat: 'table',",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true,",
+                "\terrorHandlingOption: 'stopOnFirstError') ~> sinkDimPaciente"
+            ]
+        }
+    }
+}

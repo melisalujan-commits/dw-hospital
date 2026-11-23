@@ -1,0 +1,90 @@
+{
+    "name": "df_silver_diagnoses",
+    "properties": {
+        "folder": {
+            "name": "silver"
+        },
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_bronze_diagnoses",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcDiagnoses"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_admissions",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcSilverAdmissions"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_diagnoses",
+                        "type": "DatasetReference"
+                    },
+                    "name": "sinkSilverDiagnoses"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "limpiar1"
+                },
+                {
+                    "name": "limpiar2"
+                },
+                {
+                    "name": "admisionExiste"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "\t\tdiagnosis_id as string,",
+                "\t\tadmission_id as string,",
+                "\t\ticd_code as string,",
+                "\t\tdiagnosis_description as string,",
+                "\t\tseverity as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcDiagnoses",
+                "source(output(",
+                "\t\tadmission_id as integer,",
+                "\t\tpatient_id as integer,",
+                "\t\tadmission_date as date,",
+                "\t\tdischarge_date as date,",
+                "\t\tdepartment as string,",
+                "\t\tattending_doctor_id as integer",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcSilverAdmissions",
+                "srcDiagnoses derive(diagnosis_id = toInteger(trim(diagnosis_id)),",
+                "\t\tadmission_id = toInteger(trim(admission_id)),",
+                "\t\ticd_code = replace(upper(trim(split(icd_code, ',')[1])),'-','.'),",
+                "\t\tseverity = initCap(lower(trim(severity)))) ~> limpiar1",
+                "limpiar1 derive(icd_code = iif(instr(icd_code,'.')==0 && length(icd_code)>3, concat(left(icd_code,3),'.',substring(icd_code,4)), icd_code)) ~> limpiar2",
+                "limpiar2, srcSilverAdmissions exists(limpiar2@admission_id == srcSilverAdmissions@admission_id,",
+                "\tnegate:false,",
+                "\tbroadcast: 'auto')~> admisionExiste",
+                "admisionExiste sink(allowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tdeletable:false,",
+                "\tinsertable:true,",
+                "\tupdateable:false,",
+                "\tupsertable:false,",
+                "\tformat: 'table',",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true,",
+                "\terrorHandlingOption: 'stopOnFirstError') ~> sinkSilverDiagnoses"
+            ]
+        }
+    }
+}

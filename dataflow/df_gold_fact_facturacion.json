@@ -1,0 +1,186 @@
+{
+    "name": "df_gold_fact_facturacion",
+    "properties": {
+        "folder": {
+            "name": "gold"
+        },
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_billing",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcBilling"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_admissions",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcAdmissions"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_paciente",
+                        "type": "DatasetReference"
+                    },
+                    "name": "dimPaciente"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_departamento",
+                        "type": "DatasetReference"
+                    },
+                    "name": "dimDepartamento"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_servicio_cargo",
+                        "type": "DatasetReference"
+                    },
+                    "name": "dimServicio"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_fact_facturacion",
+                        "type": "DatasetReference"
+                    },
+                    "name": "sinkFactFacturacion"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "admSel"
+                },
+                {
+                    "name": "lkAdmision"
+                },
+                {
+                    "name": "lkPaciente"
+                },
+                {
+                    "name": "lkDepartamento"
+                },
+                {
+                    "name": "lkServicio"
+                },
+                {
+                    "name": "calcular"
+                },
+                {
+                    "name": "columnas"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "\t\tbilling_id as integer,",
+                "\t\tadmission_id as integer,",
+                "\t\tcharge_type as string,",
+                "\t\tamount as decimal(12,2),",
+                "\t\tpayment_status as string,",
+                "\t\tpayment_date as date",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcBilling",
+                "source(output(",
+                "\t\tadmission_id as integer,",
+                "\t\tpatient_id as integer,",
+                "\t\tadmission_date as date,",
+                "\t\tdischarge_date as date,",
+                "\t\tdepartment as string,",
+                "\t\tattending_doctor_id as integer",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcAdmissions",
+                "source(output(",
+                "\t\tpaciente_key as integer,",
+                "\t\tpatient_id_bk as integer,",
+                "\t\tnombre_completo as string,",
+                "\t\tgenero as string,",
+                "\t\tfecha_nacimiento as date,",
+                "\t\trango_etario as string,",
+                "\t\tcorreo_electronico as string,",
+                "\t\tdireccion as string,",
+                "\t\tproveedor_seguro as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> dimPaciente",
+                "source(output(",
+                "\t\tdepartamento_key as integer,",
+                "\t\tnombre_departamento as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> dimDepartamento",
+                "source(output(",
+                "\t\tservicio_cargo_key as integer,",
+                "\t\ttipo_cargo as string,",
+                "\t\testado_pago as string",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> dimServicio",
+                "srcAdmissions select(mapColumn(",
+                "\t\tadm_id = admission_id,",
+                "\t\tpatient_id,",
+                "\t\tdepartment",
+                "\t),",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true) ~> admSel",
+                "srcBilling, admSel lookup(admission_id == adm_id,",
+                "\tmultiple: false,",
+                "\tpickup: 'any',",
+                "\tbroadcast: 'auto')~> lkAdmision",
+                "lkAdmision, dimPaciente lookup(patient_id == patient_id_bk,",
+                "\tmultiple: false,",
+                "\tpickup: 'any',",
+                "\tbroadcast: 'auto')~> lkPaciente",
+                "lkPaciente, dimDepartamento lookup(department == nombre_departamento,",
+                "\tmultiple: false,",
+                "\tpickup: 'any',",
+                "\tbroadcast: 'auto')~> lkDepartamento",
+                "lkDepartamento, dimServicio lookup(charge_type == tipo_cargo && payment_status == estado_pago,",
+                "\tmultiple: false,",
+                "\tpickup: 'any',",
+                "\tbroadcast: 'auto')~> lkServicio",
+                "lkServicio derive(fecha_pago_key = toInteger(toString(payment_date,'yyyyMMdd')),",
+                "\t\tmonto_facturado = amount,",
+                "\t\tconteo_transacciones = 1) ~> calcular",
+                "calcular select(mapColumn(",
+                "\t\tbilling_id_bk = billing_id,",
+                "\t\tadmission_id_bk = admission_id,",
+                "\t\tpaciente_key,",
+                "\t\tdepartamento_key,",
+                "\t\tservicio_cargo_key,",
+                "\t\tfecha_pago_key,",
+                "\t\tmonto_facturado,",
+                "\t\tconteo_transacciones",
+                "\t),",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true) ~> columnas",
+                "columnas sink(allowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tdeletable:false,",
+                "\tinsertable:true,",
+                "\tupdateable:false,",
+                "\tupsertable:false,",
+                "\tformat: 'table',",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true,",
+                "\terrorHandlingOption: 'stopOnFirstError') ~> sinkFactFacturacion"
+            ]
+        }
+    }
+}

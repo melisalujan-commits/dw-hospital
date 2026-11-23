@@ -1,0 +1,68 @@
+{
+    "name": "df_gold_dim_departamento",
+    "properties": {
+        "folder": {
+            "name": "gold"
+        },
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_admissions",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcSilverAdmissions"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_departamento",
+                        "type": "DatasetReference"
+                    },
+                    "name": "sinkDimDepartamento"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "distintos"
+                },
+                {
+                    "name": "columnas"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "\t\tadmission_id as integer,",
+                "\t\tpatient_id as integer,",
+                "\t\tadmission_date as date,",
+                "\t\tdischarge_date as date,",
+                "\t\tdepartment as string,",
+                "\t\tattending_doctor_id as integer",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcSilverAdmissions",
+                "srcSilverAdmissions aggregate(groupBy(department),",
+                "\tcantidad = count()) ~> distintos",
+                "distintos select(mapColumn(",
+                "\t\tnombre_departamento = department",
+                "\t),",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true) ~> columnas",
+                "columnas sink(allowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tdeletable:false,",
+                "\tinsertable:true,",
+                "\tupdateable:false,",
+                "\tupsertable:false,",
+                "\tformat: 'table',",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true,",
+                "\terrorHandlingOption: 'stopOnFirstError') ~> sinkDimDepartamento"
+            ]
+        }
+    }
+}

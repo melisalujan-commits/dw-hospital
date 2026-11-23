@@ -1,0 +1,259 @@
+{
+    "name": "pl_gold",
+    "properties": {
+        "activities": [
+            {
+                "name": "prepararGold",
+                "type": "Script",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "linkedServiceName": {
+                    "referenceName": "ls_dw_hospital",
+                    "type": "LinkedServiceReference"
+                },
+                "typeProperties": {
+                    "scripts": [
+                        {
+                            "type": "NonQuery",
+                            "text": "DELETE FROM gold.fact_facturacion;\nDELETE FROM gold.fact_admisiones;\nDELETE FROM gold.dim_diagnostico;\nDELETE FROM gold.dim_servicio_cargo;\nDELETE FROM gold.dim_departamento;\nDELETE FROM gold.dim_paciente;\nDELETE FROM gold.dim_fecha;\n\nDECLARE @ini DATE, @fin DATE;\nSELECT @ini = MIN(f), @fin = MAX(f) FROM (\n    SELECT admission_date AS f FROM silver.admissions\n    UNION ALL SELECT discharge_date FROM silver.admissions\n    UNION ALL SELECT payment_date FROM silver.billing) t WHERE f IS NOT NULL;\nSET @ini = DATEFROMPARTS(YEAR(@ini),1,1);\nSET @fin = DATEFROMPARTS(YEAR(@fin),12,31);\n\nWITH n AS (SELECT TOP (DATEDIFF(DAY,@ini,@fin)+1) ROW_NUMBER() OVER (ORDER BY (SELECT NULL))-1 AS i\n           FROM sys.all_objects a CROSS JOIN sys.all_objects b)\nINSERT INTO gold.dim_fecha (fecha_key, fecha_completa, anio, trimestre, trimestre_nombre, mes, mes_nombre, mes_corto,\n                            semana_anio, dia_mes, dia_semana, dia_nombre, es_fin_de_semana)\nSELECT YEAR(x.f)*10000+MONTH(x.f)*100+DAY(x.f), x.f, YEAR(x.f), DATEPART(QUARTER,x.f),\n       'T'+CAST(DATEPART(QUARTER,x.f) AS VARCHAR(1)), MONTH(x.f),\n       CHOOSE(MONTH(x.f),'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'),\n       CHOOSE(MONTH(x.f),'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'),\n       DATEPART(ISO_WEEK,x.f), DAY(x.f), y.ds,\n       CHOOSE(y.ds,'Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'),\n       CASE WHEN y.ds >= 6 THEN 1 ELSE 0 END\nFROM n\nCROSS APPLY (SELECT DATEADD(DAY,n.i,@ini) AS f) x\nCROSS APPLY (SELECT ((DATEPART(WEEKDAY,x.f)+@@DATEFIRST-2)%7)+1 AS ds) y;\n\nSET IDENTITY_INSERT gold.dim_diagnostico ON;\nINSERT INTO gold.dim_diagnostico (diagnostico_key, codigo_icd, descripcion_patologia, nivel_severidad)\nVALUES (-1, 'N/A', 'Sin diagnóstico', 'Unknown');\nSET IDENTITY_INSERT gold.dim_diagnostico OFF;"
+                        }
+                    ],
+                    "scriptBlockExecutionTimeout": "02:00:00"
+                }
+            },
+            {
+                "name": "df_gold_dim_paciente",
+                "type": "ExecuteDataFlow",
+                "dependsOn": [
+                    {
+                        "activity": "prepararGold",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataflow": {
+                        "referenceName": "df_gold_dim_paciente",
+                        "type": "DataFlowReference"
+                    },
+                    "compute": {
+                        "coreCount": 8,
+                        "computeType": "General"
+                    },
+                    "traceLevel": "Fine"
+                }
+            },
+            {
+                "name": "df_gold_dim_departamento",
+                "type": "ExecuteDataFlow",
+                "dependsOn": [
+                    {
+                        "activity": "prepararGold",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataflow": {
+                        "referenceName": "df_gold_dim_departamento",
+                        "type": "DataFlowReference"
+                    },
+                    "compute": {
+                        "coreCount": 8,
+                        "computeType": "General"
+                    },
+                    "traceLevel": "Fine"
+                }
+            },
+            {
+                "name": "df_gold_dim_diagnostico",
+                "type": "ExecuteDataFlow",
+                "dependsOn": [
+                    {
+                        "activity": "prepararGold",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataflow": {
+                        "referenceName": "df_gold_dim_diagnostico",
+                        "type": "DataFlowReference"
+                    },
+                    "compute": {
+                        "coreCount": 8,
+                        "computeType": "General"
+                    },
+                    "traceLevel": "Fine"
+                }
+            },
+            {
+                "name": "df_gold_dim_servicio_cargo",
+                "type": "ExecuteDataFlow",
+                "dependsOn": [
+                    {
+                        "activity": "prepararGold",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataflow": {
+                        "referenceName": "df_gold_dim_servicio_cargo",
+                        "type": "DataFlowReference"
+                    },
+                    "compute": {
+                        "coreCount": 8,
+                        "computeType": "General"
+                    },
+                    "traceLevel": "Fine"
+                }
+            },
+            {
+                "name": "df_gold_fact_admisiones",
+                "type": "ExecuteDataFlow",
+                "dependsOn": [
+                    {
+                        "activity": "df_gold_dim_paciente",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "df_gold_dim_departamento",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "df_gold_dim_diagnostico",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "df_gold_dim_servicio_cargo",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataflow": {
+                        "referenceName": "df_gold_fact_admisiones",
+                        "type": "DataFlowReference"
+                    },
+                    "compute": {
+                        "coreCount": 8,
+                        "computeType": "General"
+                    },
+                    "traceLevel": "Fine"
+                }
+            },
+            {
+                "name": "df_gold_fact_facturacion",
+                "type": "ExecuteDataFlow",
+                "dependsOn": [
+                    {
+                        "activity": "df_gold_dim_paciente",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "df_gold_dim_departamento",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "df_gold_dim_diagnostico",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "df_gold_dim_servicio_cargo",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataflow": {
+                        "referenceName": "df_gold_fact_facturacion",
+                        "type": "DataFlowReference"
+                    },
+                    "compute": {
+                        "coreCount": 8,
+                        "computeType": "General"
+                    },
+                    "traceLevel": "Fine"
+                }
+            }
+        ],
+        "folder": {
+            "name": "gold"
+        },
+        "annotations": []
+    }
+}

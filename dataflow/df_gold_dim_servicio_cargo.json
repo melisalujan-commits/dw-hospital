@@ -1,0 +1,70 @@
+{
+    "name": "df_gold_dim_servicio_cargo",
+    "properties": {
+        "folder": {
+            "name": "gold"
+        },
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_silver_billing",
+                        "type": "DatasetReference"
+                    },
+                    "name": "srcSilverBilling"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "ds_gold_dim_servicio_cargo",
+                        "type": "DatasetReference"
+                    },
+                    "name": "sinkDimServicio"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "distintos"
+                },
+                {
+                    "name": "columnas"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "\t\tbilling_id as integer,",
+                "\t\tadmission_id as integer,",
+                "\t\tcharge_type as string,",
+                "\t\tamount as decimal(12,2),",
+                "\t\tpayment_status as string,",
+                "\t\tpayment_date as date",
+                "\t),",
+                "\tallowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tisolationLevel: 'READ_UNCOMMITTED',",
+                "\tformat: 'table') ~> srcSilverBilling",
+                "srcSilverBilling aggregate(groupBy(charge_type,",
+                "\t\tpayment_status),",
+                "\tcantidad = count()) ~> distintos",
+                "distintos select(mapColumn(",
+                "\t\ttipo_cargo = charge_type,",
+                "\t\testado_pago = payment_status",
+                "\t),",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true) ~> columnas",
+                "columnas sink(allowSchemaDrift: true,",
+                "\tvalidateSchema: false,",
+                "\tdeletable:false,",
+                "\tinsertable:true,",
+                "\tupdateable:false,",
+                "\tupsertable:false,",
+                "\tformat: 'table',",
+                "\tskipDuplicateMapInputs: true,",
+                "\tskipDuplicateMapOutputs: true,",
+                "\terrorHandlingOption: 'stopOnFirstError') ~> sinkDimServicio"
+            ]
+        }
+    }
+}
