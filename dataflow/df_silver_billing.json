@@ -1,93 +1,101 @@
 {
-    "name": "df_silver_billing",
-    "properties": {
-        "folder": {
-            "name": "silver"
-        },
-        "type": "MappingDataFlow",
-        "typeProperties": {
-            "sources": [
-                {
-                    "dataset": {
-                        "referenceName": "ds_bronze_billing",
-                        "type": "DatasetReference"
-                    },
-                    "name": "srcBilling"
-                },
-                {
-                    "dataset": {
-                        "referenceName": "ds_silver_admissions",
-                        "type": "DatasetReference"
-                    },
-                    "name": "srcSilverAdmissions"
-                }
-            ],
-            "sinks": [
-                {
-                    "dataset": {
-                        "referenceName": "ds_silver_billing",
-                        "type": "DatasetReference"
-                    },
-                    "name": "sinkSilverBilling"
-                }
-            ],
-            "transformations": [
-                {
-                    "name": "limpiar"
-                },
-                {
-                    "name": "sinMontoNulo"
-                },
-                {
-                    "name": "admisionExiste"
-                }
-            ],
-            "scriptLines": [
-                "source(output(",
-                "\t\tbilling_id as string,",
-                "\t\tadmission_id as string,",
-                "\t\tcharge_type as string,",
-                "\t\tamount as string,",
-                "\t\tpayment_status as string,",
-                "\t\tpayment_date as string",
-                "\t),",
-                "\tallowSchemaDrift: true,",
-                "\tvalidateSchema: false,",
-                "\tisolationLevel: 'READ_UNCOMMITTED',",
-                "\tformat: 'table') ~> srcBilling",
-                "source(output(",
-                "\t\tadmission_id as integer,",
-                "\t\tpatient_id as integer,",
-                "\t\tadmission_date as date,",
-                "\t\tdischarge_date as date,",
-                "\t\tdepartment as string,",
-                "\t\tattending_doctor_id as integer",
-                "\t),",
-                "\tallowSchemaDrift: true,",
-                "\tvalidateSchema: false,",
-                "\tisolationLevel: 'READ_UNCOMMITTED',",
-                "\tformat: 'table') ~> srcSilverAdmissions",
-                "srcBilling derive(billing_id = toInteger(trim(billing_id)),",
-                "\t\tadmission_id = toInteger(trim(admission_id)),",
-                "\t\tcharge_type = iif(isNull(charge_type),'Unknown',trim(charge_type)),",
-                "\t\tamount = abs(toDecimal(regexReplace(amount,'[^0-9.\\\\-]',''),12,2)),",
-                "\t\tpayment_status = initCap(lower(trim(payment_status))),",
-                "\t\tpayment_date = case(regexMatch(trim(payment_date),'^\\\\d{4}-\\\\d{2}-\\\\d{2}$'), toDate(trim(payment_date),'yyyy-MM-dd'), regexMatch(trim(payment_date),'^\\\\d{2}/\\\\d{2}/\\\\d{4}$'), toDate(trim(payment_date),'MM/dd/yyyy'), regexMatch(trim(payment_date),'^\\\\d{2}-\\\\d{2}-\\\\d{2}$'), toDate(trim(payment_date),'MM-dd-yy'), regexMatch(trim(payment_date),'^\\\\d{2}-[A-Za-z]{3}-\\\\d{4}$'), toDate(trim(payment_date),'dd-MMM-yyyy'), toDate(trim(payment_date),'MMMM dd, yyyy'))) ~> limpiar",
-                "limpiar filter(!isNull(amount)) ~> sinMontoNulo",
-                "sinMontoNulo, srcSilverAdmissions exists(sinMontoNulo@admission_id == srcSilverAdmissions@admission_id,",
-                "\tnegate:false,",
-                "\tbroadcast: 'auto')~> admisionExiste",
-                "admisionExiste sink(allowSchemaDrift: true,",
-                "\tvalidateSchema: false,",
-                "\tdeletable:false,",
-                "\tinsertable:true,",
-                "\tupdateable:false,",
-                "\tupsertable:false,",
-                "\tformat: 'table',",
-                "\tskipDuplicateMapInputs: true,",
-                "\tskipDuplicateMapOutputs: true,",
-                "\terrorHandlingOption: 'stopOnFirstError') ~> sinkSilverBilling"
-            ]
-        }
-    }
+	"name": "df_silver_billing",
+	"properties": {
+		"folder": {
+			"name": "silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_bronze_billing",
+						"type": "DatasetReference"
+					},
+					"name": "srcBilling"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_silver_admissions",
+						"type": "DatasetReference"
+					},
+					"name": "srcSilverAdmissions"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_silver_billing",
+						"type": "DatasetReference"
+					},
+					"name": "sinkSilverBilling"
+				}
+			],
+			"transformations": [
+				{
+					"name": "limpiar"
+				},
+				{
+					"name": "sinMontoNulo"
+				},
+				{
+					"name": "admisionExiste"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          billing_id as string,",
+				"          admission_id as string,",
+				"          charge_type as string,",
+				"          amount as string,",
+				"          payment_status as string,",
+				"          payment_date as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> srcBilling",
+				"source(output(",
+				"          admission_id as integer,",
+				"          patient_id as integer,",
+				"          admission_date as date,",
+				"          discharge_date as date,",
+				"          department as string,",
+				"          attending_doctor_id as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> srcSilverAdmissions",
+				"srcBilling derive(billing_id = toInteger(trim(billing_id)),",
+				"          admission_id = toInteger(trim(admission_id)),",
+				"          charge_type = iif(isNull(charge_type),'Unknown',trim(charge_type)),",
+				"          amount = abs(toDecimal(regexReplace(amount,'[^0-9.\\\\-]',''),12,2)),",
+				"          payment_status = initCap(lower(trim(payment_status))),",
+				"          payment_date = case(regexMatch(trim(payment_date),'^\\\\d{4}-\\\\d{2}-\\\\d{2}$'), toDate(trim(payment_date),'yyyy-MM-dd'), regexMatch(trim(payment_date),'^\\\\d{2}/\\\\d{2}/\\\\d{4}$'), toDate(trim(payment_date),'MM/dd/yyyy'), regexMatch(trim(payment_date),'^\\\\d{2}-\\\\d{2}-\\\\d{2}$'), toDate(trim(payment_date),'MM-dd-yy'), regexMatch(trim(payment_date),'^\\\\d{2}-[A-Za-z]{3}-\\\\d{4}$'), toDate(trim(payment_date),'dd-MMM-yyyy'), toDate(trim(payment_date),'MMMM dd, yyyy'))) ~> limpiar",
+				"limpiar filter(!isNull(amount)) ~> sinMontoNulo",
+				"sinMontoNulo, srcSilverAdmissions exists(limpiar@admission_id == srcSilverAdmissions@admission_id,",
+				"     negate:false,",
+				"     broadcast: 'auto')~> admisionExiste",
+				"admisionExiste sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          billing_id as integer,",
+				"          admission_id as integer,",
+				"          charge_type as string,",
+				"          amount as decimal(12,2),",
+				"          payment_status as string,",
+				"          payment_date as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkSilverBilling"
+			]
+		}
+	}
 }
